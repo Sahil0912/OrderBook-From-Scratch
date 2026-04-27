@@ -4,5 +4,5 @@
 class MatchingEngine{
     private :
     public :
-        void ProcessOrder(std::shared_ptr<Order> order, OrderBook &orderbook);
+        void ProcessOrder(Order* order, OrderBook &orderbook);
 };
