@@ -10,9 +10,11 @@ struct Order
     Quantity init_quantity;
     Side side;
     OrderType type;
+    Order* prev;
+    Order* next;
 
     Order(OrderID _ID, Quantity _init_quantity, Side _side, OrderType _type, Price _price = 0) :
-        ID(_ID), quantity(_init_quantity), init_quantity(_init_quantity), side(_side), type(_type), price(_price)
+        ID(_ID), quantity(_init_quantity), init_quantity(_init_quantity), side(_side), type(_type), price(_price), prev(nullptr), next(nullptr)
     {}
 
     void PrintOrder();
