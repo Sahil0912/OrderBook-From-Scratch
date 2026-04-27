@@ -1,54 +1,76 @@
-#include <cstddef>
-#include <vector>
+#pragma once
 
-template <typename T, size_t BlockSize = 4096>
+#include <cstddef>
+#include <utility>
+
+template <typename T, size_t CAPACITY> //capacity is toatal number of slots in the pool
 class MemoryPool{
     public:
 
         union Block{
-            T element;
-            Block* next;
+            T element; //slot is alive
+            Block* next; //slot is free
+
+            Block(){}
+            ~Block(){}
         };
 
-    MemoryPool() {}
+    MemoryPool() {
+        chunk_ = new Block[CAPACITY]; 
+        freeHead = &chunk_[0];
+        count_ = 0;
+        for(size_t i = 0; i < CAPACITY - 1; i++){
+            chunk_[i].next = &chunk_[i + 1];
+        }
+        chunk_[CAPACITY - 1].next = nullptr;
+    }
 
     ~MemoryPool() {
-        for(auto &blocks : chunks){
-            delete [] blocks;
-        }
+        delete[] chunk_;
     }
+
+    //Deleting copying and moving operations
+    MemoryPool(const MemoryPool&)            = delete;
+    MemoryPool& operator=(const MemoryPool&) = delete;
+    MemoryPool(MemoryPool&&)                 = delete;
+    MemoryPool& operator=(MemoryPool&&)      = delete;
 
     
 
-    T* allocate(){
-        if(freeHead != nullptr){
-            Block* allocatedBlock = freeHead;
-            freeHead = freeHead->next;
-            return &(allocatedBlock->element);
+    T* allocate(){ //Just for the allocation (we have to contruct the T inplace of this alloted memory)
+        if(!freeHead){ //pool exhausted
+            return nullptr; // I will be discarding the orders when the pool is exhausted
         }
         else{
-            expandPool();
-            return allocate();
+            count_++;
+            Block* slot = freeHead;
+            freeHead = freeHead->next;
+            return reinterpret_cast<T*>(slot);
         }
+    }
+    template<typename... Args>
+    T* emplace(Args&&... args){
+        T* slot = allocate();
+        if(!slot) return nullptr;
+
+        return new(slot) T{std::forward<Args>(args)...};
     }
 
     void deallocate(T* ptr){
+        if(!ptr) return; //error handling
+        ptr->~T();
         Block* blockFree = reinterpret_cast<Block*>(ptr);
         blockFree->next = freeHead;
         freeHead = blockFree;
+        --count_;
     }
+
+    size_t size() const { return count_; }
+    size_t capacity() const { return CAPACITY; }
+    bool full() const { return count_ == CAPACITY; }
 
     private :
         Block* freeHead = nullptr;
-        std::vector<Block*> chunks;
-
-        void expandPool(){ //in case the existing pool is full
-            Block* newChunk = new Block[BlockSize];
-            for(int i = 0; i < BlockSize - 1; i++){
-                newChunk[i].next = &(newChunk[i + 1]);
-            }
-            newChunk[BlockSize - 1].next = nullptr;
-            chunks.push_back(newChunk);
-            freeHead = newChunk;
-        }
-};  
+        Block* chunk_ = nullptr;
+        size_t count_; // number of alive blocks (allocated)
+};
