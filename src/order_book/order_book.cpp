@@ -3,16 +3,13 @@
 
 void OrderBook::AddOrder(Order* order){
     if((order->side) == Side::Buy){
-        if((bids.find(order->price)) == bids.end()){
-            bids.emplace(order->price, PriceLevel(order->price));
-        }
-        (bids[order->price]).AddOrder(order);
+        //using the emplace to 
+        bids.emplace(order->price, PriceLevel(order->price));
+        bids.at(order->price).AddOrder(order);
     }
     else{
-        if((asks.find(order->price)) == asks.end()){
-            asks.emplace(order->price, PriceLevel(order->price));
-        }
-        (asks[order->price]).AddOrder(order);
+        asks.emplace(order->price, PriceLevel(order->price));
+        asks.at(order->price).AddOrder(order);
     }
 }
 
