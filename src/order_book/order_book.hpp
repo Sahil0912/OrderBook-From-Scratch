@@ -1,20 +1,32 @@
 #pragma once
 #include "price_level.hpp"
-#include <map>
 
-class OrderBook{
-    private : 
-        std::map<Price, PriceLevel, std::greater<Price> > bids;
-        std::map<Price, PriceLevel > asks;
-    public:
-        void AddOrder(Order* order);
-        std::map<Price, PriceLevel >& GetAsks();
-        std::map<Price, PriceLevel, std::greater<Price> >& GetBids();
-        void RemoveAskLevel(Price);
-        void RemoveBidLevel(Price);
-        // bool IsEmptyBids();
-        // bool IsEmptyAsks();
-        void PrintOrderBook();
-    // we will still be able to change the content of PriceLevel
+class OrderBook {
+private:
+    const Price basePrice_;
+    PriceLevel levels_[MAX_PRICE_LEVELS];
+    Price bestBidPrice_;
+    Price bestAskPrice_;
 
+public:
+    explicit OrderBook(Price basePrice) : basePrice_(basePrice), bestBidPrice_(0), bestAskPrice_(basePrice_ + MAX_PRICE_LEVELS - 1) 
+    {
+        for(size_t i = 0; i < MAX_PRICE_LEVELS; ++i){
+            levels_[i] = PriceLevel(basePrice_ + i);
+        }
+    }
+
+    //O(1)
+    PriceLevel& GetLevel(Price price) { return levels_[price - basePrice_]; }
+    const PriceLevel& GetLevel(Price price) const { return levels_[price - basePrice_]; } //for reading
+
+    Price GetBasePrice() const { return basePrice_; }
+    Price GetBestBidPrice() const { return bestBidPrice_; }
+    Price GetBestAskPrice() const { return bestAskPrice_; }
+    
+    void SetBestBidPrice(Price price) { bestBidPrice_ = price; }
+    void SetBestAskPrice(Price price) { bestAskPrice_ = price; }
+
+    void AddOrder(Order* order);
+    void PrintOrderBook() const;
 };

@@ -1,7 +1,7 @@
 #include "price_level.hpp"
 
 
-void PriceLevel::PrintPriceLevel(){
+void PriceLevel::PrintPriceLevel() const{
     auto ptr = head;
     while(ptr != nullptr){
         ptr->PrintOrder();

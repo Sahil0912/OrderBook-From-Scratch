@@ -56,7 +56,7 @@ class PriceLevel{
             }
             orderCount--;
         }
-        void PrintPriceLevel();
+        void PrintPriceLevel() const;
         
 
 };

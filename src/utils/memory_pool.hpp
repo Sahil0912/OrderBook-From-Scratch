@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <utility>
+#include <new>
 
 template <typename T, size_t CAPACITY> //capacity is toatal number of slots in the pool
 class MemoryPool{
