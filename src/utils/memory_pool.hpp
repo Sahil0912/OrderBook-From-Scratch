@@ -53,7 +53,7 @@ class MemoryPool{
         T* slot = allocate();
         if(!slot) return nullptr;
 
-        return new(slot) T{std::forward<Args>(args)...};
+        return new(slot) T(std::forward<Args>(args)...);
     }
 
     void deallocate(T* ptr){
