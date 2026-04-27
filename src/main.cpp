@@ -1,4 +1,3 @@
-#include <iostream>
 #include "matching_engine/matching_engine.hpp"
 #include "utils/memory_pool.hpp"
 
