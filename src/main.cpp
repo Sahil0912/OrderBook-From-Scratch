@@ -1,16 +1,16 @@
 #include "matching_engine/matching_engine.hpp"
-#include "utils/memory_pool.hpp"
 
 int main(){
-
-    OrderBook testOrderBook(10);
-    MatchingEngine testEngine;
-    MemoryPool<Order, 1024> pool;
-    Order* order1 = pool.emplace(1, 100, Side::Sell, OrderType::Limit, 100);
-    testEngine.ProcessOrder(order1, testOrderBook);
-    Order* order2 = pool.emplace(2, 101, Side::Buy, OrderType::Limit, 99);
-    testEngine.ProcessOrder(order2, testOrderBook);
-    testOrderBook.PrintOrderBook();
-
+    MatchingEngine engine(10);
+    
+    engine.ProcessOrder(1, 100, Side::Sell, OrderType::Limit, 100);
+    engine.ProcessOrder(2, 50,  Side::Sell, OrderType::Limit, 101);
+    engine.ProcessOrder(3, 200, Side::Buy,  OrderType::Limit, 99);
+    
+    engine.PrintOrderBook();
+    
+    engine.CancelOrder(1);
+    engine.PrintOrderBook();
+    
     return 0;
 }
