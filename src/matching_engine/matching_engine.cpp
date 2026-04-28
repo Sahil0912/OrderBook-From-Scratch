@@ -1,15 +1,19 @@
 #include "matching_engine.hpp"
 #include <algorithm>
 
-void MatchingEngine::ProcessOrder(Order* order, OrderBook &orderbook){
+
+MatchingEngine::MatchingEngine(Price basePrice) : book_(basePrice) {}
+
+void MatchingEngine::ProcessOrder(Order* order){
+    lookup_.Insert(order);
     if(order->side == Side::Buy){
-        Price askPrice = orderbook.GetBestAskPrice();
-        Price maxAsk = orderbook.GetBasePrice() + MAX_PRICE_LEVELS - 1;
+        Price askPrice = book_.GetBestAskPrice();
+        Price maxAsk = book_.GetBasePrice() + MAX_PRICE_LEVELS - 1;
         while(order->quantity > 0 && askPrice <= maxAsk){
             
             if(order->type == OrderType::Limit && order->price < askPrice) break;
 
-            auto& currLevel = orderbook.GetLevel(askPrice);
+            auto& currLevel = book_.GetLevel(askPrice);
             while(order->quantity > 0 && !currLevel.IsEmpty()){
                 Order* front = currLevel.GetHead();
                 Quantity MinQuantity = std::min(front->quantity, order->quantity);
@@ -17,29 +21,31 @@ void MatchingEngine::ProcessOrder(Order* order, OrderBook &orderbook){
                 front->quantity -= MinQuantity;
                 if(front->quantity == 0){
                     currLevel.RemoveTopOrder();
+                    lookup_.Remove(front->ID);
+                    pool_.deallocate(front);
                 }
             }
             if(currLevel.IsEmpty()){
                 askPrice++;
-                while(askPrice <= maxAsk && orderbook.GetLevel(askPrice).IsEmpty()){
+                while(askPrice <= maxAsk && book_.GetLevel(askPrice).IsEmpty()){
                     askPrice++;
                 }
-                orderbook.SetBestAskPrice(askPrice);
+                book_.SetBestAskPrice(askPrice);
             }
         }
         if(order->quantity > 0 && order->type == OrderType::Limit){
-            orderbook.AddOrder(order);
+            book_.AddOrder(order);
         }
 
     }
     else{
-        Price bidPrice = orderbook.GetBestBidPrice();
-        Price minBid = orderbook.GetBasePrice();
+        Price bidPrice = book_.GetBestBidPrice();
+        Price minBid = book_.GetBasePrice();
         while(order->quantity > 0 && bidPrice >= minBid && bidPrice != 0){
             
             if(order->type == OrderType::Limit && order->price > bidPrice) break;
 
-            auto& currLevel = orderbook.GetLevel(bidPrice);
+            auto& currLevel = book_.GetLevel(bidPrice);
             while(order->quantity > 0 && !currLevel.IsEmpty()){
                 Order* front = currLevel.GetHead();
                 Quantity MinQuantity = std::min(front->quantity, order->quantity);
@@ -47,18 +53,45 @@ void MatchingEngine::ProcessOrder(Order* order, OrderBook &orderbook){
                 front->quantity -= MinQuantity;
                 if(front->quantity == 0){
                     currLevel.RemoveTopOrder();
+                    lookup_.Remove(front->ID);
+                    pool_.deallocate(front);
                 }
             }
             if(currLevel.IsEmpty()){
                 bidPrice--;
-                while(bidPrice >= minBid && bidPrice != 0 && orderbook.GetLevel(bidPrice).IsEmpty()){
+                while(bidPrice >= minBid && bidPrice != 0 && book_.GetLevel(bidPrice).IsEmpty()){
                     bidPrice--;
                 }
-                orderbook.SetBestBidPrice(bidPrice);
+                book_.SetBestBidPrice(bidPrice);
             }
         }
         if(order->quantity > 0 && order->type == OrderType::Limit){
-            orderbook.AddOrder(order);
+            book_.AddOrder(order);
         }
     }
+}
+
+void MatchingEngine::ProcessOrder(OrderID id, Quantity qty, Side side, OrderType type, Price price){
+    Order* order = pool_.emplace(id, qty, side, type, price);
+    if(!order) return; //pool exhausted
+    MatchingEngine::ProcessOrder(order);
+}
+
+bool MatchingEngine::CancelOrder(OrderID id){
+    Order* order = lookup_.Find(id);
+    if(!order) return false;
+    book_.RemoveOrder(order);
+    lookup_.Remove(id);
+    pool_.deallocate(order);
+    return true;
+}
+bool MatchingEngine::CancelOrder(Order* order){
+    if(!order) return false;
+    book_.RemoveOrder(order);
+    lookup_.Remove(order->ID);
+    pool_.deallocate(order);
+    return true;
+}
+void MatchingEngine::PrintOrderBook() const{
+    book_.PrintOrderBook();
 }
