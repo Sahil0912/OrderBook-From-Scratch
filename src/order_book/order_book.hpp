@@ -28,5 +28,9 @@ public:
     void SetBestAskPrice(Price price) { bestAskPrice_ = price; }
 
     void AddOrder(Order* order);
+
+    void RemoveOrder(Order *order);
+    void ReCalcBestBidAndAsk();
+
     void PrintOrderBook() const;
 };

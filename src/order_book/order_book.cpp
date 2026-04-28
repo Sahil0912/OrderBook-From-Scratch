@@ -20,6 +20,29 @@ void OrderBook::AddOrder(Order* order){
     }
 }
 
+void OrderBook::RemoveOrder(Order* order){
+    auto& currLevel = OrderBook::GetLevel(order->price);
+    if(!currLevel.IsEmpty()){
+        currLevel.RemoveOrder(order);
+    }
+    ReCalcBestBidAndAsk();
+}
+
+void OrderBook::ReCalcBestBidAndAsk(){
+    for(int i = bestAskPrice_; i < (int)(basePrice_ + MAX_PRICE_LEVELS); i++){
+        if(!OrderBook::GetLevel(i).IsEmpty()){
+            bestAskPrice_ = i;
+            break;
+        }
+    }
+    for(int i = bestBidPrice_; i >= (int)basePrice_; i--){
+        if(!OrderBook::GetLevel(i).IsEmpty()){
+            bestBidPrice_ = i;
+            break;
+        }
+    }
+}
+
 void OrderBook::PrintOrderBook() const{
     std::cout << "---------Bids---------\n\n";
     if(bestBidPrice_ != 0){
@@ -28,6 +51,8 @@ void OrderBook::PrintOrderBook() const{
             if(!pricelevel.IsEmpty()){
                 std::cout << "Price : " << pricelevel.GetPrice() << "\n";
                 pricelevel.PrintPriceLevel();
+                std::cout << "--------------\n";
+                std::cout << "\n";
             }
             
         }
@@ -41,6 +66,8 @@ void OrderBook::PrintOrderBook() const{
         if(!pricelevel.IsEmpty()){
             std::cout << "Price : " << pricelevel.GetPrice() << "\n";
             pricelevel.PrintPriceLevel();
+            std::cout << "--------------\n";
+            std::cout << "\n";
         }
     }
     std::cout << "\n\n";
