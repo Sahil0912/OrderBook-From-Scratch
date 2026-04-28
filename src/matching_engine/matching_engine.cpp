@@ -26,10 +26,8 @@ void MatchingEngine::ProcessOrder(Order* order){
                 }
             }
             if(currLevel.IsEmpty()){
-                askPrice++;
-                while(askPrice <= maxAsk && book_.GetLevel(askPrice).IsEmpty()){
-                    askPrice++;
-                }
+                //finding next non-empty ask in O(N/64)
+                askPrice = book_.FindNextAsk(askPrice + 1);
                 book_.SetBestAskPrice(askPrice);
             }
         }
@@ -58,9 +56,11 @@ void MatchingEngine::ProcessOrder(Order* order){
                 }
             }
             if(currLevel.IsEmpty()){
-                bidPrice--;
-                while(bidPrice >= minBid && bidPrice != 0 && book_.GetLevel(bidPrice).IsEmpty()){
-                    bidPrice--;
+                if(bidPrice > minBid){
+                    bidPrice = book_.FindNextBid(bidPrice - 1);
+                }
+                else{
+                    bidPrice = 0;
                 }
                 book_.SetBestBidPrice(bidPrice);
             }
