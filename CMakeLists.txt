@@ -17,7 +17,7 @@ target_link_libraries(OrderBookEngine engine_lib)
 
 find_package(benchmark QUIET)
 if(benchmark_FOUND)
-    add_executable(bench_engine benchmarks/bench_engine.cpp)
+    add_executable(bench_engine benchmarks/benchmark_engine.cpp)
     target_link_libraries(bench_engine engine_lib benchmark::benchmark)
     message(STATUS "Google Benchmark found — benchmark target enabled")
 else()
