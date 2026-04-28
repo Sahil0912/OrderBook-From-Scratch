@@ -1,72 +1,42 @@
-# Order Book Project
+# NanoMatch — Nanosecond Matching Engine
 
-This project implements a high-performance order book system using modern C++ constructs and efficient coding practices. The order book is designed to handle buy and sell orders, match them efficiently, and provide a robust interface for users and other systems.
+A low-latency limit order book and matching engine written in C++17, designed from the ground up with cache-friendly, zero-allocation data structures. No STL containers on the hot path.
 
-## Project Structure
+## Setup & Running
 
-```
-order-book
-├── src
-│   ├── main.cpp                  # Entry point of the application
-│   ├── order_book
-│   │   ├── order_book.cpp        # Implementation of the OrderBook class
-│   │   ├── order_book.hpp        # Declaration of the OrderBook class
-│   │   ├── order.cpp             # Implementation of the Order class
-│   │   ├── order.hpp             # Declaration of the Order class
-│   │   ├── price_level.cpp       # Implementation of the PriceLevel class
-│   │   └── price_level.hpp       # Declaration of the PriceLevel class
-│   ├── matching_engine
-│   │   ├── matching_engine.cpp    # Implementation of the MatchingEngine class
-│   │   └── matching_engine.hpp    # Declaration of the MatchingEngine class
-│   └── utils
-│       ├── memory_pool.hpp       # Memory pool for efficient memory management
-│       └── types.hpp             # Common types and constants
-├── include
-│   └── order_book
-│       └── order_book.hpp        # Public interface for the OrderBook class
-├── tests
-│   ├── test_order_book.cpp       # Unit tests for the OrderBook class
-│   ├── test_matching_engine.cpp   # Unit tests for the MatchingEngine class
-│   └── test_order.cpp            # Unit tests for the Order class
-├── benchmarks
-│   └── benchmark_order_book.cpp   # Benchmarking code for performance measurement
-├── CMakeLists.txt                # CMake configuration file
-└── README.md                     # Project documentation
+```bash
+git clone https://github.com/Sahil0912/NanoMatch.git
+cd NanoMatch
+mkdir -p build && cd build
+cmake ..
+make
+./OrderBookEngine
 ```
 
-## Setup Instructions
+Requires: CMake ≥ 3.13, a C++17 compiler (GCC/Clang).
 
-1. **Clone the repository:**
-   ```
-   git clone <repository-url>
-   cd order-book
-   ```
+## What I've Built So Far
 
-2. **Build the project:**
-   ```
-   mkdir build
-   cd build
-   cmake ..
-   make
-   ```
+### Cache-Optimized Memory Management
+- **Custom Memory Pool** - Pre-allocates a contiguous block of `Order` slots at startup. Allocation and deallocation are O(1) via an intrusive free-list. Zero `malloc` calls on the hot path.
+- **Intrusive Doubly-Linked Lists** - `prev`/`next` pointers live inside the `Order` struct itself. No external container nodes, no `std::deque`, no heap-allocated iterators.
 
-3. **Run the application:**
-   ```
-   ./order-book
-   ```
+### Flat Array Order Book
+- Replaced `std::map<Price, PriceLevel>` (red-black tree with pointer-chasing cache misses) with a **fixed-size contiguous array** indexed by price tick. Price level lookup is O(1) — a single pointer arithmetic operation.
+- Manual best-bid/best-ask tracking with linear recalculation over contiguous memory when a level empties.
 
-## Usage
+### O(1) Order Cancellation
+- **Flat sparse lookup table** mapping `OrderID → Order*` for O(1) find. No hash maps, no heap allocation.
+- Full cancel lifecycle: lookup → DLL unlink → best-price recalc → pool deallocation. All O(1).
 
-The order book system allows users to add, remove, and match orders. The main application will handle user input or data feeds to interact with the order book and matching engine.
+### Self-Contained Matching Engine
+- `MatchingEngine` owns the order book, memory pool, and lookup table — single point of ownership for the entire order lifecycle.
+- Filled passive orders are deallocated back to the pool immediately (no memory leaks).
+- Supports Limit and Market order types with strict price-time priority.
 
-## Overview
+## What I am planning to do in the future
 
-The order book consists of several key components:
-
-- **OrderBook**: Manages the collection of orders and facilitates order matching.
-- **Order**: Represents individual buy or sell orders with properties like order ID, price, and quantity.
-- **PriceLevel**: Organizes orders at a specific price point for efficient matching.
-- **MatchingEngine**: Processes incoming orders and matches them against existing orders in the order book.
-- **MemoryPool**: Provides efficient memory management for orders and price levels.
-
-This project aims to provide a scalable and efficient solution for order management in trading systems.
+- [ ] **Benchmarking Harness** - Google Benchmark integration + `rdtsc` inline wrappers for cycle-accurate latency measurement. Latency percentiles (p50, p90, p99, p99.9) and throughput (orders/sec).
+- [ ] **Order Modification** - Cancel-replace with correct price-time priority semantics (keep priority on qty decrease, lose priority on price change).
+- [ ] **Lock-Free Trade Logging** - SPSC ring buffer using `std::atomic` for async trade execution reporting without blocking the matching path.
+- [ ] **Zero-Copy Data Ingestion** - `mmap`-based market data parser bypassing `std::ifstream` entirely. Read directly from the kernel page cache.
