@@ -1,72 +1,37 @@
-# Order Book Project
+# NanoMatch - Map-Based Order Book (Legacy Branch)
 
-This project implements a high-performance order book system using modern C++ constructs and efficient coding practices. The order book is designed to handle buy and sell orders, match them efficiently, and provide a robust interface for users and other systems.
+This branch contains the initial `std::map`-based implementation of the matching engine. It is functionally correct but uses STL containers that cause cache misses and heap allocations on the hot path. See the `flat-orderbook` branch for the optimized version.
 
-## Project Structure
+## Setup & Running
 
-```
-order-book
-├── src
-│   ├── main.cpp                  # Entry point of the application
-│   ├── order_book
-│   │   ├── order_book.cpp        # Implementation of the OrderBook class
-│   │   ├── order_book.hpp        # Declaration of the OrderBook class
-│   │   ├── order.cpp             # Implementation of the Order class
-│   │   ├── order.hpp             # Declaration of the Order class
-│   │   ├── price_level.cpp       # Implementation of the PriceLevel class
-│   │   └── price_level.hpp       # Declaration of the PriceLevel class
-│   ├── matching_engine
-│   │   ├── matching_engine.cpp    # Implementation of the MatchingEngine class
-│   │   └── matching_engine.hpp    # Declaration of the MatchingEngine class
-│   └── utils
-│       ├── memory_pool.hpp       # Memory pool for efficient memory management
-│       └── types.hpp             # Common types and constants
-├── include
-│   └── order_book
-│       └── order_book.hpp        # Public interface for the OrderBook class
-├── tests
-│   ├── test_order_book.cpp       # Unit tests for the OrderBook class
-│   ├── test_matching_engine.cpp   # Unit tests for the MatchingEngine class
-│   └── test_order.cpp            # Unit tests for the Order class
-├── benchmarks
-│   └── benchmark_order_book.cpp   # Benchmarking code for performance measurement
-├── CMakeLists.txt                # CMake configuration file
-└── README.md                     # Project documentation
+```bash
+git clone https://github.com/Sahil0912/NanoMatch.git
+cd NanoMatch
+git checkout map-orderbook
+mkdir -p build && cd build
+cmake ..
+make
+./OrderBookEngine
 ```
 
-## Setup Instructions
+Requires: CMake ≥ 3.13, a C++17 compiler (GCC/Clang).
 
-1. **Clone the repository:**
-   ```
-   git clone <repository-url>
-   cd order-book
-   ```
+## What's in This Branch
 
-2. **Build the project:**
-   ```
-   mkdir build
-   cd build
-   cmake ..
-   make
-   ```
+### Map-Based Order Book
+- Bids stored in `std::map<Price, PriceLevel, std::greater<Price>>` (sorted high → low).
+- Asks stored in `std::map<Price, PriceLevel>` (sorted low → high).
+- Top-of-book via `begin()` — O(1) amortized but involves pointer dereferences to heap-allocated tree nodes.
 
-3. **Run the application:**
-   ```
-   ./order-book
-   ```
+### Memory Pool
+- Custom `MemoryPool<Order>` with intrusive free-list for O(1) allocation/deallocation.
+- Orders are allocated from a contiguous pre-allocated block — no `malloc` on the hot path.
 
-## Usage
+### Matching Engine
+- Stateless `MatchingEngine` — receives an `Order*` and `OrderBook&` externally.
+- Traverses the map via iterators to match aggressive orders against resting orders.
+- Supports Limit and Market order types.
 
-The order book system allows users to add, remove, and match orders. The main application will handle user input or data feeds to interact with the order book and matching engine.
-
-## Overview
-
-The order book consists of several key components:
-
-- **OrderBook**: Manages the collection of orders and facilitates order matching.
-- **Order**: Represents individual buy or sell orders with properties like order ID, price, and quantity.
-- **PriceLevel**: Organizes orders at a specific price point for efficient matching.
-- **MatchingEngine**: Processes incoming orders and matches them against existing orders in the order book.
-- **MemoryPool**: Provides efficient memory management for orders and price levels.
-
-This project aims to provide a scalable and efficient solution for order management in trading systems.
+### Intrusive Linked Lists
+- Each `PriceLevel` manages orders as an intrusive doubly-linked list (`Order::prev`, `Order::next`).
+- No `std::deque` or external container nodes.
