@@ -34,6 +34,10 @@ void MatchingEngine::ProcessOrder(Order* order){
         if(order->quantity > 0 && order->type == OrderType::Limit){
             book_.AddOrder(order);
         }
+        else{
+            lookup_.Remove(order->ID);
+            pool_.deallocate(order);
+        }
 
     }
     else{
@@ -67,6 +71,10 @@ void MatchingEngine::ProcessOrder(Order* order){
         }
         if(order->quantity > 0 && order->type == OrderType::Limit){
             book_.AddOrder(order);
+        }
+        else{
+            lookup_.Remove(order->ID);
+            pool_.deallocate(order);
         }
     }
 }
