@@ -52,11 +52,16 @@ Requires: CMake ≥ 3.13, a C++17 compiler (GCC/Clang).
 
 ## Performance Profiling & Benchmarking
 
-Compiled with `-O3 -march=native` and rigorously tested using `asm volatile` assembly memory clobbers to prevent compiler Dead Code Elimination (DCE).
+Compiled with `-O3 -march=native` and rigorously tested using `asm volatile` assembly memory clobbers to prevent compiler Dead Code Elimination (DCE). All numbers include lock-free SPSC ring buffer push on every fill.
 
-- **Throughput:** 28+ million orders/sec
-- **Matching Latency (p50):** ~85 ns 
-- **Tail Latency (p99.9):** Deterministic sub-150ns execution
+- **Throughput:** 23.81 million orders/sec
+- **Matching Latency (p50):** 200 cycles (117.6 ns)
+- **Matching Latency (p90):** 214 cycles (125.9 ns)
+- **Matching Latency (p99):** 252 cycles (148.2 ns)
+- **Tail Latency (p99.9):** 296 cycles (174.1 ns)
+- **Passive Order Add:** 15.2 ns
+- **Order Cancellation:** 16.0 ns
+- **5-Level Sweep:** 589 ns
 - **Sweep Optimization:** Empty-level scans are ~250x faster due to bitmap hardware intrinsics.
 - Built custom cycle-accurate `rdtsc` and `rdtscp` fences to measure absolute cycle latency directly from the CPU, bypassing slow OS clock boundaries (`std::chrono`).
 
