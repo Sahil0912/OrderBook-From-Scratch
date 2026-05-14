@@ -19,6 +19,8 @@ void MatchingEngine::ProcessOrder(Order* order){
                 Quantity MinQuantity = std::min(front->quantity, order->quantity);
                 order->quantity -= MinQuantity;
                 front->quantity -= MinQuantity;
+                TradeEvent evt{order->ID, front->ID, askPrice, MinQuantity, order->side, rdtsc()};
+                if (!tradeRing_.push(evt)) droppedEvents_++;
                 if(front->quantity == 0){
                     currLevel.RemoveTopOrder();
                     lookup_.Remove(front->ID);
@@ -53,6 +55,8 @@ void MatchingEngine::ProcessOrder(Order* order){
                 Quantity MinQuantity = std::min(front->quantity, order->quantity);
                 order->quantity -= MinQuantity;
                 front->quantity -= MinQuantity;
+                TradeEvent evt{order->ID, front->ID, bidPrice, MinQuantity, order->side, rdtsc()};
+                if (!tradeRing_.push(evt)) droppedEvents_++;
                 if(front->quantity == 0){
                     currLevel.RemoveTopOrder();
                     lookup_.Remove(front->ID);

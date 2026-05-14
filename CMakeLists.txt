@@ -13,7 +13,8 @@ set(ENGINE_SOURCES
 add_library(engine_lib STATIC ${ENGINE_SOURCES})
 
 add_executable(OrderBookEngine src/main.cpp)
-target_link_libraries(OrderBookEngine engine_lib)
+find_package(Threads REQUIRED)
+target_link_libraries(OrderBookEngine engine_lib Threads::Threads)
 
 find_package(benchmark QUIET)
 if(benchmark_FOUND)
