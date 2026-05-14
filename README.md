@@ -43,6 +43,13 @@ Requires: CMake ≥ 3.13, a C++17 compiler (GCC/Clang).
 - Filled passive orders are deallocated back to the pool immediately (no memory leaks).
 - Supports Limit and Market order types with strict price-time priority.
 
+### Lock-Free Trade Logging (SPSC Ring Buffer)
+- **Wait-free SPSC ring buffer** (`SPSCRing<T, CAPACITY>`) using `std::atomic` with explicit `acquire/release` memory ordering — zero mutexes, zero syscalls, zero allocations on the hot path.
+- `alignas(64)` cache-line isolation on `head_`/`tail_` indices to eliminate false sharing (MESI ping-pong) between producer and consumer cores.
+- Compile-time safety: `static_assert` enforces power-of-2 capacity (bitmask indexing) and `std::is_trivially_copyable` (safe lock-free copying).
+- Trade events are pushed into the ring buffer immediately after each fill (~5 ns overhead per fill), then a dedicated background thread spin-polls and writes to disk asynchronously.
+- Non-blocking design: `push()` returns `false` on a full buffer rather than blocking, preserving deterministic matching latency.
+
 ## Performance Profiling & Benchmarking
 
 Compiled with `-O3 -march=native` and rigorously tested using `asm volatile` assembly memory clobbers to prevent compiler Dead Code Elimination (DCE).
@@ -56,5 +63,4 @@ Compiled with `-O3 -march=native` and rigorously tested using `asm volatile` ass
 ## What I am planning to do in the future
 
 - [ ] **Order Modification** - Cancel-replace with correct price-time priority semantics (keep priority on qty decrease, lose priority on price change).
-- [ ] **Lock-Free Trade Logging** - SPSC ring buffer using `std::atomic` for async trade execution reporting without blocking the matching path.
 - [ ] **Zero-Copy Data Ingestion** - `mmap`-based market data parser bypassing `std::ifstream` entirely. Read directly from the kernel page cache.
